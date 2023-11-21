@@ -9,7 +9,7 @@ import Animated, {
     useSharedValue
 } from 'react-native-reanimated';
 
-const RangeSlider = ({ sliderWidth, min, max, step, onValueChange }) => {
+const MultiRangeSlider = ({ sliderWidth, min, max, step, onValueChange }) => {
 
     const position = useSharedValue(0)
     const position2 = useSharedValue(sliderWidth)
@@ -195,6 +195,83 @@ const styles2 = StyleSheet.create({
     }
 })
 
+const SingleRangeSlider = ({ sliderWidth, min, max, step, onValueChange }) => {
+
+    const position = useSharedValue(0)
+    const zIndex = useSharedValue(1)
+    const opacity = useSharedValue(0)
+
+    const _gestureHandler = useAnimatedGestureHandler({
+        onStart: (_, ctx) => {
+            ctx.startX = position.value
+        },
+        onActive: (e, ctx) => {
+            opacity.value = 1
+            if (ctx.startX + e.translationX < 0) {
+                position.value = 0
+            } else if (ctx.startX + e.translationX >= sliderWidth) {
+
+            } else {
+                position.value = ctx.startX + e.translationX
+            }
+            zIndex.value = 1
+        },
+        onEnd: (e, ctx) => {
+            opacity.value = 0
+            runOnJS(onValueChange)({
+                min: `$${min +
+                    Math.floor(position.value / (sliderWidth / ((max - min) / step))) * step
+                    }`,
+            })
+        },
+    })
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: position.value }],
+        zIndex: zIndex.value
+    }))
+    const opacityStyle1 = useAnimatedStyle(() => ({
+        opacity: opacity.value
+    }))
+    const sliderFrontSide = useAnimatedStyle(() => ({
+        // transform: [{ translateX: position.value }],
+        width: position.value
+    }))
+
+    const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
+    const minLabelText = useAnimatedProps(() => {
+        return {
+            text: `$${min +
+                Math.floor(position.value / (sliderWidth / ((max - min) / step))) * step
+                }`,
+        };
+    });
+
+    return (
+        <View style={[styles2.sliderContainer, { width: sliderWidth }]}>
+
+            <View style={[styles2.sliderBack, { width: sliderWidth }]} />
+            <Animated.View style={[styles2.sliderFront, sliderFrontSide]} />
+
+
+
+            <PanGestureHandler onGestureEvent={_gestureHandler}>
+                <Animated.View style={[styles2.thumb, animatedStyle]}>
+                    <Animated.View style={[styles2.label, opacityStyle1]}>
+                        <AnimatedTextInput
+                            style={styles2.labelText}
+                            animatedProps={minLabelText}
+                            editable={false}
+                            defaultValue={'0'}
+                        />
+                    </Animated.View>
+                </Animated.View>
+            </PanGestureHandler>
+
+        </View>
+    )
+}
+
 const SliderComp = ({ }) => {
     const MIN_DEFAULT = 10;
     const MAX_DEFAULT = 500;
@@ -205,7 +282,17 @@ const SliderComp = ({ }) => {
             <View style={styles.contentContainer}>
                 <View style={styles.content}>
                     <Text style={styles.text}>{"Price Slide"}</Text>
-                    <RangeSlider
+                    <MultiRangeSlider
+                        sliderWidth={300}
+                        min={18}
+                        max={99}
+                        step={1}
+                        onValueChange={range => {
+                            setMinValue(range.min);
+                            setMaxValue(range.max);
+                        }}
+                    />
+                    <SingleRangeSlider
                         sliderWidth={300}
                         min={18}
                         max={99}
